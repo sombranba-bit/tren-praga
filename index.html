@@ -47,6 +47,8 @@
   td.nota { white-space: normal; min-width: 150px; color: var(--muted); font-size: .9rem; }
   .est { color: var(--muted); font-size: .85rem; margin-left: 60px; }
   .op { display: inline-block; min-width: 54px; padding: 1px 8px; border-radius: 6px; color: #fff; font-size: .8rem; font-weight: 600; text-align: center; margin-right: 6px; }
+  .comprar { display: inline-block; padding: 5px 10px; border-radius: 7px; border: 1px solid var(--line); color: var(--ink); text-decoration: none; font-size: .85rem; font-weight: 600; }
+  .comprar:hover, .comprar:focus-visible { border-color: var(--muted); }
   .links { display: flex; flex-wrap: wrap; gap: 8px; }
   .links a { color: var(--ink); text-decoration: none; border: 1px solid var(--line); border-radius: 8px; padding: 7px 12px; background: var(--card); }
   .links a:hover { border-color: var(--muted); }
@@ -75,7 +77,7 @@
   <section class="card">
     <h2>Trenes en la franja (última pasada)</h2>
     <div class="tablewrap"><table>
-      <thead><tr><th>Tren</th><th class="num">€/persona</th><th class="num" id="th-total">Total</th><th class="num">Desde que apareció</th><th class="num">Mínimo visto</th><th>Nota</th></tr></thead>
+      <thead><tr><th>Tren</th><th class="num">€/persona</th><th class="num" id="th-total">Total</th><th class="num">Desde que apareció</th><th class="num">Mínimo visto</th><th>Nota</th><th></th></tr></thead>
       <tbody id="tabla"></tbody>
     </table></div>
     <p class="empty" id="tabla-vacia" hidden></p>
@@ -96,6 +98,7 @@ const COLORES = { AVE: "--ave", Avlo: "--avlo", ALVIA: "--alvia", Ouigo: "--ouig
 const color = op => getComputedStyle(document.documentElement).getPropertyValue(COLORES[op] || "--otro").trim();
 const eur = n => n == null ? "–" : n.toLocaleString("es-ES", { style: "currency", currency: "EUR" });
 const hora = iso => new Date(iso).toLocaleString("es-ES", { timeZone: "Europe/Madrid", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" });
+const WEB = { Renfe: "https://www.renfe.com/es/es", Ouigo: "https://www.ouigo.com/es/" };
 const clave = t => `${t.op}|${t.de}|${t.sale}`;
 const conPrecio = t => !t.agotado && t.precio != null;
 const $ = id => document.getElementById(id);
@@ -169,7 +172,14 @@ function pintar({ config: c, pasadas }) {
       <td class="num">${t.precio != null ? eur(t.precio * c.adultos) : "–"}</td>
       <td class="num ${delta > 0 ? "bad" : delta < 0 ? "good" : ""}">${delta == null ? "–" : delta === 0 ? "=" : (delta > 0 ? "+" : "") + eur(delta)}</td>
       <td class="num">${h ? eur(h.min) : "–"}</td>
-      <td class="nota">${notas.join(" · ")}</td>`;
+      <td class="nota">${notas.join(" · ")}</td>
+      <td>${t.agotado ? "" : `<a class="comprar" href="${t.op === "Ouigo" ? WEB.Ouigo : WEB.Renfe}" target="_blank" rel="noopener">Comprar</a>`}</td>`;
+    // Ninguna web de tren admite enlace a un billete: se abre el operador y se copian los datos para pegarlos.
+    const a = tr.querySelector(".comprar");
+    if (a) a.addEventListener("click", () => {
+      const txt = `${c.ruta} · ${fecha} · ${t.op} ${t.sale} desde ${t.de} · ${c.adultos} adultos`;
+      navigator.clipboard?.writeText(txt).then(() => { a.textContent = "Datos copiados"; }, () => {});
+    });
     $("tabla").append(tr);
   }
   $("tabla-vacia").hidden = filas.length > 0;
