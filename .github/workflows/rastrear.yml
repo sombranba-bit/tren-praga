@@ -1,0 +1,42 @@
+name: Rastrear precios
+
+on:
+  schedule:
+    - cron: "23 */3 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: datos
+  cancel-in-progress: false
+
+jobs:
+  pasada:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Descargar renfecli (versión fijada y verificada)
+        run: |
+          curl -sSLf -o renfe.tgz https://github.com/seifreed/renfecli/releases/download/v1.0.0/renfe_v1.0.0_linux_amd64.tar.gz
+          echo "7f06469f9fc4eab1a36f9c8bb0dcab5d217c140f9df18ae18eda17d5384ac8d1  renfe.tgz" | sha256sum -c -
+          tar xzf renfe.tgz
+          mv renfe_v1.0.0_linux_amd64/renfe ./renfe
+          rm -rf renfe.tgz renfe_v1.0.0_linux_amd64
+
+      - name: Consultar Renfe y Ouigo
+        run: python3 rastreador.py
+
+      - name: Guardar la pasada
+        if: always()
+        run: |
+          git config user.name  "rastreador[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add data/
+          git diff --staged --quiet && exit 0
+          git commit -m "pasada $(date -u +'%Y-%m-%d %H:%M')"
+          git pull --rebase
+          git push
